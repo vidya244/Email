@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:netsuite="http://www.mulesoft.org/schema/mule/netsuite" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/netsuite http://www.mulesoft.org/schema/mule/netsuite/current/mule-netsuite.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="990e365c-59ab-41d3-a1e2-0fa0183aa171" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="54f2bea9-0ecb-4405-9986-dd8807637f62" >
+		<salesforce:cached-basic-connection username="vbogaram@open-logix.com" password="salesforce@244" securityToken="jtDNq9YmnMZhrwYQqD177Fok" />
+	</salesforce:sfdc-config>
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="3f555a9c-00ae-41c2-b2cc-785a6a7f251c" >
+		<email:smtp-connection host="smtp.gmail.com" port="587" user="bogaramvidya@gmail.com" password="felicidad244" >
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<flow name="querysfFlow" doc:id="286789d2-a9de-438c-82c9-c16b4beaf82e" >
+		<http:listener doc:name="Listener" doc:id="4f92c8bc-2cf1-4316-a82f-0745b38bcb30" config-ref="HTTP_Listener_config" path="/email"/>
+		<salesforce:query doc:name="Query" doc:id="80bed2d2-ac24-43e0-80d5-222550de9c7e" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query >SELECT Email FROM CONTACT WHERE FirstName = ':name'</salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	name : attributes.queryParams.name
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="58211e81-3ba6-4532-a75d-8f772394887c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="Email" ><![CDATA[%dw 2.0
+output application/java
+---
+payload[0].Email ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<email:send doc:name="Send" doc:id="ba659d54-b4be-4b39-bdcf-141002068865" config-ref="Email_SMTP" fromAddress="bogaramvidya@gmail.com" subject="Email from Mulesoft">
+			<email:to-addresses>
+				<email:to-address value="#[vars.Email]" />
+			</email:to-addresses>
+			<email:body>
+				<email:content ><![CDATA[#["Start each day with greatful heart"]]]></email:content>
+			</email:body>
+		</email:send>
+		<set-payload value='"Successfully sent message"' doc:name="Set Payload" doc:id="80c2704c-2653-464e-9c35-af3f627138a6" />
+	</flow>
+</mule>
